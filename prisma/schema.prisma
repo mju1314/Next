@@ -1,0 +1,188 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Domain {
+  id        String   @id
+  name      String
+  icon      String?
+  color     String?
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt String   @map("created_at")
+  updatedAt String   @map("updated_at")
+  goals     Goal[]
+
+  @@map("domains")
+}
+
+model Goal {
+  id          String    @id
+  domainId    String?   @map("domain_id")
+  title       String
+  description String?
+  importance  Int       @default(3)
+  startDate   String?   @map("start_date")
+  targetDate  String?   @map("target_date")
+  status      String    @default("active")
+  progress    Float     @default(0)
+  createdAt   String    @map("created_at")
+  updatedAt   String    @map("updated_at")
+  domain      Domain?   @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  projects    Project[]
+  tasks       Task[]
+
+  @@index([domainId])
+  @@map("goals")
+}
+
+model Project {
+  id           String  @id
+  goalId       String? @map("goal_id")
+  title        String
+  description  String?
+  status       String  @default("active")
+  progress     Float   @default(0)
+  startDate    String? @map("start_date")
+  targetDate   String? @map("target_date")
+  lastActiveAt String? @map("last_active_at")
+  createdAt    String  @map("created_at")
+  updatedAt    String  @map("updated_at")
+  goal         Goal?   @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  tasks        Task[]
+
+  @@index([goalId])
+  @@map("projects")
+}
+
+model Task {
+  id             String      @id
+  projectId      String?     @map("project_id")
+  goalId         String?     @map("goal_id")
+  title          String
+  description    String?
+  status         String      @default("todo")
+  priorityManual Int?        @map("priority_manual")
+  estimateMin    Int?        @map("estimate_min")
+  actualMin      Int         @default(0) @map("actual_min")
+  dueAt          String?     @map("due_at")
+  taskType       String?     @map("task_type")
+  energyLevel    String?     @map("energy_level")
+  isBlocked      Boolean     @default(false) @map("is_blocked")
+  scoreSnapshot  String?     @map("score_snapshot")
+  createdAt      String      @map("created_at")
+  updatedAt      String      @map("updated_at")
+  project        Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  goal           Goal?       @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  inboxItems     InboxItem[]
+  dailyFoci      DailyFocus[]
+  workSessions   WorkSession[]
+
+  @@index([projectId])
+  @@index([goalId])
+  @@index([status])
+  @@map("tasks")
+}
+
+model WorkSession {
+  id          String  @id
+  taskId      String  @map("task_id")
+  startAt     String  @map("start_at")
+  endAt       String? @map("end_at")
+  durationMin Int?    @map("duration_min")
+  focusScore  Int?    @map("focus_score")
+  note        String?
+  createdAt   String  @map("created_at")
+  task        Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([endAt])
+  @@map("work_sessions")
+}
+
+model InboxItem {
+  id                 String   @id
+  rawText            String   @map("raw_text")
+  source             String   @default("manual")
+  status             String   @default("unprocessed")
+  convertedTaskId    String?  @map("converted_task_id")
+  convertedProjectId String?  @map("converted_project_id")
+  convertedGoalId    String?  @map("converted_goal_id")
+  createdAt          String   @map("created_at")
+  updatedAt          String   @map("updated_at")
+  convertedTask      Task?    @relation(fields: [convertedTaskId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([convertedTaskId])
+  @@map("inbox_items")
+}
+
+model DailyPlan {
+  id               String       @id
+  date             String       @unique
+  availableMinutes Int          @map("available_minutes")
+  mood             Int?
+  energy           Int?
+  status           String       @default("active")
+  createdAt        String       @map("created_at")
+  updatedAt        String       @map("updated_at")
+  foci             DailyFocus[]
+
+  @@map("daily_plans")
+}
+
+model DailyReview {
+  id              String @id
+  date            String @unique
+  content         String
+  source          String @default("manual")
+  metricsSnapshot String? @map("metrics_snapshot")
+  createdAt       String @map("created_at")
+  updatedAt       String @map("updated_at")
+
+  @@map("daily_reviews")
+}
+
+model DailyFocus {
+  id             String    @id
+  dailyPlanId    String    @map("daily_plan_id")
+  taskId         String    @map("task_id")
+  rank           Int
+  plannedMinutes Int?      @map("planned_minutes")
+  reason         String?
+  scoreDetail    String?   @map("score_detail")
+  status         String    @default("planned")
+  createdAt      String    @map("created_at")
+  updatedAt      String    @map("updated_at")
+  dailyPlan      DailyPlan @relation(fields: [dailyPlanId], references: [id], onDelete: Cascade)
+  task           Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([dailyPlanId, rank])
+  @@index([dailyPlanId])
+  @@index([taskId])
+  @@map("daily_foci")
+}
+
+model AIRecommendationLog {
+  id            String  @id
+  kind          String
+  action        String
+  inputSummary  String? @map("input_summary")
+  outputSummary String? @map("output_summary")
+  error         String?
+  errorDetail   String? @map("error_detail")
+  providerName  String? @map("provider_name")
+  model         String?
+  status        Int?
+  durationMs    Int?    @map("duration_ms")
+  createdAt     String  @map("created_at")
+
+  @@index([kind])
+  @@index([action])
+  @@index([createdAt])
+  @@map("ai_recommendation_logs")
+}

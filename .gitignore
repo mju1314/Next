@@ -1,0 +1,17 @@
+node_modules
+.next
+.npm-cache
+.tmp
+.next-dev.*
+dist
+coverage
+.env
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+*.log
+*.pid
+.next-start.*
+.next-review-dev.*
+backups/
